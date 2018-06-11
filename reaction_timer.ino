@@ -19,20 +19,35 @@
  digits.
 
  Each display will use about 150mA with all segments and decimal point on.
+ 
+ IR Sensor Hookup Guide:
+ https://learn.sparkfun.com/tutorials/ir-control-kit-hookup-guide?_ga=2.214256978.432679391.1528704631-3662316.1528704631
+ 
 */
+#include <IRremote.h>
+#define POWER 0x10EFD827 
+#define A 0x10EFF807 
+#define B 0x10EF7887
+#define C 0x10EF58A7
+#define UP 0x10EFA05F
+#define DOWN 0x10EF00FF
+#define LEFT 0x10EF10EF
+#define RIGHT 0x10EF807F
+#define SELECT 0x10EF20DF
+
 
 #define DISPLAY_DIGITS 3
 
-//GPIO declarations
-//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-byte segmentClock = 6;
-byte segmentLatch = 5;
-byte segmentData = 7;
-
-const byte sw1Pin= 2;
-const byte sw2Pin= 3;
-//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-
+//******************************************************************************
+// GPIO
+const byte segmentClock = 6;
+const byte segmentLatch = 5;
+const byte segmentData = 7;
+const byte sw1Pin= 2; // start switch pin
+const byte sw2Pin= 3; // reaction switch pin
+// IR Remote
+const int RECV_PIN = 11; // IR 'out' pin
+IRrecv irrecv(RECV_PIN);
 //Globals
 unsigned long sw1_time = 0;
 unsigned long sw2_time = 0;
@@ -44,6 +59,7 @@ float display_time = 0;
 byte waiting_for_response = 0;
 byte waiting_for_response_prev = 0;
 byte triggered= 0;
+//******************************************************************************
 
 void setup()
 {
@@ -71,13 +87,17 @@ void setup()
   showNumber(response_time, 4, 0);
   digitalWrite(segmentLatch, LOW);
   digitalWrite(segmentLatch, HIGH);
+  
+  // Start the IR receiver
+  irrecv.enableIRIn();
 }
-
-int number = 0;
 
 void loop()
 {
-//  if((0 == waiting_for_response) && (0xFF == waiting_for_response_prev))
+  
+  read_ir();
+  
+  
   if(0xFF == triggered)
   {
     Serial.print("Switch 1 time: ");
@@ -204,6 +224,47 @@ void postNumber(byte number, boolean decimal)
     digitalWrite(segmentClock, HIGH); //Data transfers to the register on the rising edge of SRCK
   }
 }
+
+// periodic function for reading the IR sensor and calling the switch trigger
+void read_ir(void)
+{
+    decode_results result;
+    
+    if (irrecv.decode(&result)) 
+    {
+        if  (
+            (result.value == POWER) || 
+            (result.value == SELECT)
+            )
+        {
+            isr_sw1();
+        }
+        irrecv.resume();
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
